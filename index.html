@@ -1,26 +1,710 @@
-<!doctype html>
-<html>
-<head><title>Captcha Solver</title></head>
+<!doctype html>                    
+  
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captcha Solver - AI-Powered OCR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-methods {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .upload-btn, .url-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .upload-btn:hover, .url-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-btn:active, .url-btn:active {
+            transform: translateY(0);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .url-input-group {
+            display: none;
+            margin-top: 15px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .url-input-group.active {
+            display: flex;
+            gap: 10px;
+        }
+
+        .url-input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .url-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .url-input-group button {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .image-container {
+            position: relative;
+            margin: 30px 0;
+            text-align: center;
+            min-height: 200px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px dashed #e0e0e0;
+        }
+
+        #img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        #img.loaded {
+            display: block;
+        }
+
+        .placeholder {
+            color: #999;
+            font-size: 1.2em;
+            padding: 60px 20px;
+        }
+
+        .placeholder.hidden {
+            display: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+            border-left: 4px solid #c33;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+
+        .action-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        #solve {
+            padding: 18px 50px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #solve:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        #solve:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-section.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-header h3 {
+            color: #667eea;
+            font-size: 1.3em;
+        }
+
+        .copy-btn {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+
+        .copy-btn.copied {
+            background: #38ef7d;
+        }
+
+        #result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            font-size: 1.1em;
+            line-height: 1.6;
+            word-wrap: break-word;
+            min-height: 60px;
+        }
+
+        .history-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+            display: none;
+        }
+
+        .history-section.active {
+            display: block;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .history-header h3 {
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .clear-history {
+            padding: 8px 15px;
+            background: #e0e0e0;
+            color: #666;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .clear-history:hover {
+            background: #d0d0d0;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .history-time {
+            font-size: 0.85em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .history-text {
+            color: #333;
+            word-wrap: break-word;
+        }
+
+        .spinner {
+            display: none;
+            margin: 20px auto;
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .upload-methods {
+                flex-direction: column;
+            }
+
+            .upload-btn, .url-btn {
+                width: 100%;
+            }
+
+            #solve {
+                width: 100%;
+                padding: 15px 30px;
+            }
+        }
+    </style>
+</head>
 <body>
-<h1>Captcha Solver</h1>
-<img id='img' style='max-width:300px;display:block;'/>
-<div><button id='solve'>Solve</button></div>
-<h3 id='result'></h3>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
-<script>
- const p = new URLSearchParams(location.search);
- const u = p.get('url') || "captcha_sample.png";
- document.getElementById('img').src = u;
- document.getElementById('solve').onclick = async () => {
-   const r = document.getElementById('result');
-   r.textContent = 'Solving...';
-   const worker = Tesseract.createWorker();
-   await worker.load();
-   await worker.loadLanguage('eng');
-   await worker.initialize('eng');
-   const out = await worker.recognize(document.getElementById('img'));
-   r.textContent = out.data.text.trim();
-   await worker.terminate();
- };
-</script>
-</body></html>
+    <div class="container">
+        <header>
+            <h1>Captcha Solver</h1>
+            <div class="subtitle">AI-Powered OCR with Tesseract.js</div>
+        </header>
+
+        <div class="content">
+            <div class="upload-section">
+                <div class="upload-methods">
+                    <button class="upload-btn" onclick="triggerFileUpload()">
+                        Upload Image
+                    </button>
+                    <button class="url-btn" onclick="toggleUrlInput()">
+                        Load from URL
+                    </button>
+                </div>
+                <div class="url-input-group" id="urlInputGroup">
+                    <input type="text" id="urlInput" placeholder="Enter image URL...">
+                    <button onclick="loadFromUrl()">Load</button>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(event)">
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="image-container">
+                <div class="placeholder" id="placeholder">
+                    Upload an image or load from URL to get started
+                </div>
+                <img id="img" alt="Captcha to solve">
+            </div>
+
+            <div class="spinner" id="spinner"></div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Initializing...</div>
+            </div>
+
+            <div class="action-section">
+                <button id="solve" disabled>Solve CAPTCHA</button>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="result-header">
+                    <h3>Extracted Text</h3>
+                    <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">Copy</button>
+                </div>
+                <div id="result"></div>
+            </div>
+
+            <div class="history-section" id="historySection">
+                <div class="history-header">
+                    <h3>History</h3>
+                    <button class="clear-history" onclick="clearHistory()">Clear All</button>
+                </div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+
+        <footer>
+            Powered by Tesseract.js - All processing happens in your browser
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <script>
+        let history = [];
+        let currentImageSrc = null;
+
+        function loadHistory() {
+            const saved = localStorage.getItem('captchaHistory');
+            if (saved) {
+                history = JSON.parse(saved);
+                updateHistoryDisplay();
+            }
+        }
+
+        function saveHistory() {
+            localStorage.setItem('captchaHistory', JSON.stringify(history));
+        }
+
+        function addToHistory(text) {
+            const item = {
+                text: text,
+                timestamp: new Date().toLocaleString()
+            };
+            history.unshift(item);
+            if (history.length > 10) {
+                history = history.slice(0, 10);
+            }
+            saveHistory();
+            updateHistoryDisplay();
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+            const historySection = document.getElementById('historySection');
+            
+            if (history.length === 0) {
+                historySection.classList.remove('active');
+                return;
+            }
+
+            historySection.classList.add('active');
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <div class="history-time">${item.timestamp}</div>
+                    <div class="history-text">${item.text || '(empty result)'}</div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all history?')) {
+                history = [];
+                localStorage.removeItem('captchaHistory');
+                updateHistoryDisplay();
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+            setTimeout(() => {
+                errorEl.classList.remove('visible');
+            }, 5000);
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('visible');
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('fileInput').click();
+        }
+
+        function toggleUrlInput() {
+            const urlGroup = document.getElementById('urlInputGroup');
+            urlGroup.classList.toggle('active');
+            if (urlGroup.classList.contains('active')) {
+                document.getElementById('urlInput').focus();
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    showError('Please select a valid image file');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    loadImage(e.target.result);
+                };
+                reader.onerror = function() {
+                    showError('Failed to read file');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function loadFromUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) {
+                showError('Please enter a valid URL');
+                return;
+            }
+            loadImage(url);
+            document.getElementById('urlInputGroup').classList.remove('active');
+        }
+
+        function loadImage(src) {
+            hideError();
+            const img = document.getElementById('img');
+            const placeholder = document.getElementById('placeholder');
+            
+            img.onload = function() {
+                currentImageSrc = src;
+                img.classList.add('loaded');
+                placeholder.classList.add('hidden');
+                document.getElementById('solve').disabled = false;
+                document.getElementById('resultSection').classList.remove('active');
+            };
+            
+            img.onerror = function() {
+                showError('Failed to load image. Please check the URL or try a different image.');
+                img.classList.remove('loaded');
+                placeholder.classList.remove('hidden');
+                document.getElementById('solve').disabled = true;
+            };
+            
+            img.src = src;
+        }
+
+        async function copyToClipboard() {
+            const text = document.getElementById('result').textContent;
+            const copyBtn = document.getElementById('copyBtn');
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                showError('Failed to copy to clipboard');
+            }
+        }
+
+        function updateProgress(percent, message) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.classList.add('active');
+            progressFill.style.width = percent + '%';
+            progressText.textContent = message;
+        }
+
+        document.getElementById('solve').onclick = async () => {
+            const resultEl = document.getElementById('result');
+            const resultSection = document.getElementById('resultSection');
+            const solveBtn = document.getElementById('solve');
+            const spinner = document.getElementById('spinner');
+            
+            hideError();
+            solveBtn.disabled = true;
+            spinner.classList.add('active');
+            resultSection.classList.remove('active');
+            
+            try {
+                updateProgress(0, 'Initializing OCR engine...');
+                
+                const worker = await Tesseract.createWorker({
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            const percent = Math.round(m.progress * 100);
+                            updateProgress(percent, `Processing image: ${percent}%`);
+                        }
+                    }
+                });
+                
+                await worker.loadLanguage('eng');
+                await worker.initialize('eng');
+                
+                updateProgress(100, 'Extracting text...');
+                
+                const out = await worker.recognize(document.getElementById('img'));
+                const text = out.data.text.trim();
+                
+                resultEl.textContent = text || '(No text detected)';
+                resultSection.classList.add('active');
+                
+                if (text) {
+                    addToHistory(text);
+                }
+                
+                await worker.terminate();
+            } catch (error) {
+                showError('OCR processing failed: ' + error.message);
+                console.error('OCR Error:', error);
+            } finally {
+                spinner.classList.remove('active');
+                document.getElementById('progressContainer').classList.remove('active');
+                solveBtn.disabled = false;
+            }
+        };
+
+        const urlParams = new URLSearchParams(location.search);
+        const urlParam = urlParams.get('url');
+        
+        if (urlParam) {
+            loadImage(urlParam);
+        } else {
+            loadImage('captcha_sample.png');
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>
